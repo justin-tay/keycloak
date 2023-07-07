@@ -29,10 +29,10 @@ export enum PromptSelect {
 }
 
 export enum ClientAuthentication {
-  post = "Client secret sent as basic auth",
-  basicAuth = "Client secret as jwt",
-  jwt = "JWT signed with private key",
-  jwtPrivKey = "Client secret sent as post",
+  post = "Client secret sent as post",
+  basicAuth = "Client secret sent as basic auth",
+  jwt = "Client secret as jwt",
+  jwtPrivKey = "JWT signed with private key",
 }
 
 export enum ClientAssertionSigningAlg {
@@ -83,6 +83,7 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
   private pkceMethod = "#pkceMethod";
   private clientAuth = "#clientAuthentication";
   private clientAssertionSigningAlg = "#clientAssertionSigningAlg";
+  private clientAssertionSendClientIdSwitch = "#clientAssertionSendClientId";
 
   public clickSaveBtn() {
     cy.findByTestId(this.saveBtn).click();
@@ -178,6 +179,11 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
       clientAssertionSigningAlg,
       cy.get(".pf-c-select__menu-item").contains(clientAssertionSigningAlg)
     );
+    return this;
+  }
+
+  public clickClientAssertionSendClientIdSwitch() {
+    cy.get(this.clientAssertionSendClientIdSwitch).parent().click();
     return this;
   }
 
@@ -297,6 +303,14 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
     return this;
   }
 
+  public assertClientAssertSentClientIdSwitchTurnedOn(isOn: boolean) {
+    super.assertSwitchStateOn(
+      cy.get(this.clientAssertionSendClientIdSwitch),
+      isOn
+    );
+    return this;
+  }
+
   public assertOIDCUrl(url: string) {
     cy.findByTestId("jump-link-openid-connect-settings").click();
     cy.findByTestId(url + "Url")
@@ -362,6 +376,11 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
     return this;
   }
 
+  public assertOIDCClientAuthSendClientIdSwitch() {
+    cy.get(this.clientAssertionSendClientIdSwitch).parent().click();
+    this.assertClientAssertSentClientIdSwitchTurnedOn(true);
+  }
+
   public assertOIDCSettingsAdvancedSwitches() {
     cy.get(this.advancedSettingsToggle).scrollIntoView().click();
 
@@ -417,9 +436,6 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
     );
     this.assertPostLoginFlowSelectOptionEqual(LoginFlowOption.none);
     this.assertSyncModeSelectOptionEqual(SyncModeOption.import);
-    this.assertClientAssertSigAlgSelectOptionEqual(
-      ClientAssertionSigningAlg.algorithmNotSpecified
-    );
     return this;
   }
 }

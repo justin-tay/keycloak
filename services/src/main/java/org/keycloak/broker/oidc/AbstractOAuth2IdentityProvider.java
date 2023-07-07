@@ -405,9 +405,13 @@ public abstract class AbstractOAuth2IdentityProvider<C extends OAuth2IdentityPro
 
         if (getConfig().isJWTAuthentication()) {
             String jws = new JWSBuilder().type(OAuth2Constants.JWT).jsonContent(generateToken()).sign(getSignatureContext());
-            return tokenRequest
+            SimpleHttp result = tokenRequest
                     .param(OAuth2Constants.CLIENT_ASSERTION_TYPE, OAuth2Constants.CLIENT_ASSERTION_TYPE_JWT)
                     .param(OAuth2Constants.CLIENT_ASSERTION, jws);
+            if(getConfig().isClientAssertionSendClientId()) {
+                result.param(OAUTH2_PARAMETER_CLIENT_ID, getConfig().getClientId());
+            }
+            return result;
         } else {
             try (VaultStringSecret vaultStringSecret = session.vault().getStringSecret(getConfig().getClientSecret())) {
                 if (getConfig().isBasicAuthentication()) {
