@@ -84,6 +84,7 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
   private clientAuth = "#clientAuthentication";
   private clientAssertionSigningAlg = "#clientAssertionSigningAlg";
   private clientAssertionSendClientIdSwitch = "#clientAssertionSendClientId";
+  private clientAssertionAudienceInput = "#clientAssertionAudience";
 
   public clickSaveBtn() {
     cy.findByTestId(this.saveBtn).click();
@@ -184,6 +185,11 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
 
   public clickClientAssertionSendClientIdSwitch() {
     cy.get(this.clientAssertionSendClientIdSwitch).parent().click();
+    return this;
+  }
+
+  public typeClientAssertionAudience(text: string) {
+    cy.get(this.clientAssertionAudienceInput).type(text).blur();
     return this;
   }
 
@@ -308,6 +314,13 @@ export default class ProviderBaseGeneralSettingsPage extends PageObject {
       cy.get(this.clientAssertionSendClientIdSwitch),
       isOn
     );
+    return this;
+  }
+
+  public assertClientAssertionAudienceInputEqual(text: string) {
+    cy.get(this.clientAssertionAudienceInput)
+      .should("have.value", text)
+      .parent();
     return this;
   }
 

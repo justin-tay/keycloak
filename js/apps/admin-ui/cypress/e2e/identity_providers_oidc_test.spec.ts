@@ -96,6 +96,13 @@ describe("OIDC identity provider test", () => {
       Object.entries(ClientAssertionSigningAlg).forEach(([, value]) => {
         providerBaseAdvancedSettingsPage.assertOIDCClientAuthSignAlg(value);
       });
+      //Client assertion audience
+      providerBaseAdvancedSettingsPage.typeClientAssertionAudience(
+        "http://localhost:8180"
+      );
+      providerBaseAdvancedSettingsPage.assertClientAssertionAudienceInputEqual(
+        "http://localhost:8180"
+      );
       //Client assertion send client id
       providerBaseAdvancedSettingsPage.assertOIDCClientAuthSendClientIdSwitch();
       //OIDC Advanced Settings
