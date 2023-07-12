@@ -154,7 +154,15 @@ public class OAuth2IdentityProviderConfig extends IdentityProviderModel {
     public void setClientAssertionSigningAlg(String signingAlg) {
         getConfig().put("clientAssertionSigningAlg", signingAlg);
     }
-    
+
+    public boolean isClientAssertionSendClientId() {
+        return Boolean.parseBoolean(getConfig().getOrDefault("clientAssertionSendClientId", "false"));
+    }
+
+    public void setClientAssertionSendClientId(boolean enabled) {
+        getConfig().put("clientAssertionSendClientId", String.valueOf(enabled));
+    }
+
     @Override
     public void validate(RealmModel realm) {
         SslRequired sslRequired = realm.getSslRequired();
