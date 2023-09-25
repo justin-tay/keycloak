@@ -35,7 +35,8 @@ import org.junit.Test;
 import org.keycloak.common.util.Base64;
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.crypto.KeyType;
-import org.keycloak.keys.GeneratedEcdsaKeyProviderFactory;
+import org.keycloak.crypto.KeyUse;
+import org.keycloak.keys.GeneratedEcdhKeyProviderFactory;
 import org.keycloak.keys.KeyProvider;
 import org.keycloak.representations.idm.ComponentRepresentation;
 import org.keycloak.representations.idm.KeysMetadataRepresentation;
@@ -47,9 +48,12 @@ import org.keycloak.testsuite.admin.ApiUtil;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.LoginPage;
 
-public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
+public class GeneratedEcdhKeyProviderTest extends AbstractKeycloakTest {
     private static final String DEFAULT_EC = "P-256";
-    private static final String ECDSA_ELLIPTIC_CURVE_KEY = "ecdsaEllipticCurveKey";
+    private static final String ECDH_ELLIPTIC_CURVE_KEY = "ecdhEllipticCurveKey";
+    private static final String ECDH_ALGORITHM_MODE_KEY = "ecdhAlgorithmMode";
+    private static final String ECDH_ALGORITHM_MODE_DIRECT = "Direct key agreement mode";
+    private static final String ECDH_ALGORITHM_MODE_KW = "Key wrapping mode";
     private static final String TEST_REALM_NAME = "test";
 
     @Rule
@@ -68,42 +72,70 @@ public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
     }
 
     @Test
-    public void defaultEc() {
-        supportedEc(null);
+    public void defaultEcDirect() {
+        supportedEc(null, ECDH_ALGORITHM_MODE_DIRECT);
     }
 
     @Test
-    public void supportedEcP521() {
-        supportedEc("P-521");
+    public void supportedEcP521Direct() {
+        supportedEc("P-521", ECDH_ALGORITHM_MODE_DIRECT);
     }
 
     @Test
-    public void supportedEcP384() {
-        supportedEc("P-384");
+    public void supportedEcP384Direct() {
+        supportedEc("P-384", ECDH_ALGORITHM_MODE_DIRECT);
     }
 
     @Test
-    public void supportedEcP256() {
-        supportedEc("P-256");
+    public void supportedEcP256Direct() {
+        supportedEc("P-256", ECDH_ALGORITHM_MODE_DIRECT);
     }
 
     @Test
-    public void unsupportedEcK163() {
+    public void unsupportedEcK163Direct() {
         // NIST.FIPS.186-4 Koblitz Curve over Binary Field
-        unsupportedEc("K-163");
+        unsupportedEc("K-163", ECDH_ALGORITHM_MODE_DIRECT);
     }
 
-    private String supportedEc(String ecInNistRep) {
+    @Test
+    public void defaultEcKeyWrap() {
+        supportedEc(null, ECDH_ALGORITHM_MODE_KW);
+    }
+
+    @Test
+    public void supportedEcP521KeyWrap() {
+        supportedEc("P-521", ECDH_ALGORITHM_MODE_KW);
+    }
+
+    @Test
+    public void supportedEcP384KeyWrap() {
+        supportedEc("P-384", ECDH_ALGORITHM_MODE_KW);
+    }
+
+    @Test
+    public void supportedEcP256KeyWrap() {
+        supportedEc("P-256", ECDH_ALGORITHM_MODE_KW);
+    }
+
+    @Test
+    public void unsupportedEcK163KeyWrap() {
+        // NIST.FIPS.186-4 Koblitz Curve over Binary Field
+        unsupportedEc("K-163", ECDH_ALGORITHM_MODE_KW);
+    }
+
+
+    private String supportedEc(String ecInNistRep, String algorithmMode) {
         long priority = System.currentTimeMillis();
 
-        ComponentRepresentation rep = createRep("valid", GeneratedEcdsaKeyProviderFactory.ID);
+        ComponentRepresentation rep = createRep("valid", GeneratedEcdhKeyProviderFactory.ID);
         rep.setConfig(new MultivaluedHashMap<>());
         rep.getConfig().putSingle("priority", Long.toString(priority));
         if (ecInNistRep != null) {
-            rep.getConfig().putSingle(ECDSA_ELLIPTIC_CURVE_KEY, ecInNistRep);
+            rep.getConfig().putSingle(ECDH_ELLIPTIC_CURVE_KEY, ecInNistRep);
         } else {
             ecInNistRep = DEFAULT_EC;
         }
+        rep.getConfig().putSingle(ECDH_ALGORITHM_MODE_KEY, algorithmMode);
 
         Response response = adminClient.realm(TEST_REALM_NAME).components().add(rep);
         String id = ApiUtil.getCreatedId(response);
@@ -113,9 +145,10 @@ public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
         ComponentRepresentation createdRep = adminClient.realm(TEST_REALM_NAME).components().component(id).toRepresentation();
 
         // stands for the number of properties in the key provider config
-        assertEquals(2, createdRep.getConfig().size());
+        assertEquals(3, createdRep.getConfig().size());
         assertEquals(Long.toString(priority), createdRep.getConfig().getFirst("priority"));
-        assertEquals(ecInNistRep, createdRep.getConfig().getFirst(ECDSA_ELLIPTIC_CURVE_KEY));
+        assertEquals(ecInNistRep, createdRep.getConfig().getFirst(ECDH_ELLIPTIC_CURVE_KEY));
+        assertEquals(algorithmMode, createdRep.getConfig().getFirst(ECDH_ALGORITHM_MODE_KEY));
 
         KeysMetadataRepresentation keys = adminClient.realm(TEST_REALM_NAME).keys().getKeyMetadata();
 
@@ -131,18 +164,20 @@ public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
 
         assertEquals(id, key.getProviderId());
         assertEquals(KeyType.EC, key.getType());
+        assertEquals(KeyUse.ENC, key.getUse());
         assertEquals(priority, key.getProviderPriority());
 
         return id; // created key's component id
     }
 
-    private void unsupportedEc(String ecInNistRep) {
+    private void unsupportedEc(String ecInNistRep, String algorithmMode) {
         long priority = System.currentTimeMillis();
 
-        ComponentRepresentation rep = createRep("valid", GeneratedEcdsaKeyProviderFactory.ID);
+        ComponentRepresentation rep = createRep("valid", GeneratedEcdhKeyProviderFactory.ID);
         rep.setConfig(new MultivaluedHashMap<>());
         rep.getConfig().putSingle("priority", Long.toString(priority));
-        rep.getConfig().putSingle(ECDSA_ELLIPTIC_CURVE_KEY, ecInNistRep);
+        rep.getConfig().putSingle(ECDH_ELLIPTIC_CURVE_KEY, ecInNistRep);
+        rep.getConfig().putSingle(ECDH_ALGORITHM_MODE_KEY, algorithmMode);
         boolean isEcAccepted = true;
 
         Response response = null;
@@ -160,22 +195,37 @@ public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
     }
 
     @Test
-    public void changeCurveFromP256ToP384() throws Exception {
-        changeCurve("P-256", "P-384");
+    public void changeCurveFromP256ToP384Direct() throws Exception {
+        changeCurve("P-256", "P-384", ECDH_ALGORITHM_MODE_DIRECT);
     }
 
     @Test
-    public void changeCurveFromP384ToP521() throws Exception  {
-        changeCurve("P-384", "P-521");
+    public void changeCurveFromP384ToP521Direct() throws Exception  {
+        changeCurve("P-384", "P-521", ECDH_ALGORITHM_MODE_DIRECT);
     }
 
     @Test
-    public void changeCurveFromP521ToP256() throws Exception  {
-        changeCurve("P-521", "P-256");
+    public void changeCurveFromP521ToP256Direct() throws Exception  {
+        changeCurve("P-521", "P-256", ECDH_ALGORITHM_MODE_DIRECT);
     }
 
-    private void changeCurve(String FromEcInNistRep, String ToEcInNistRep) throws Exception {
-        String keyComponentId = supportedEc(FromEcInNistRep);
+    @Test
+    public void changeCurveFromP256ToP384KeyWrap() throws Exception {
+        changeCurve("P-256", "P-384", ECDH_ALGORITHM_MODE_KW);
+    }
+
+    @Test
+    public void changeCurveFromP384ToP521KeyWrap() throws Exception  {
+        changeCurve("P-384", "P-521", ECDH_ALGORITHM_MODE_KW);
+    }
+
+    @Test
+    public void changeCurveFromP521ToP256KeyWrap() throws Exception  {
+        changeCurve("P-521", "P-256", ECDH_ALGORITHM_MODE_KW);
+    }
+
+    private void changeCurve(String fromEcInNistRep, String toEcInNistRep, String algorithmMode) throws Exception {
+        String keyComponentId = supportedEc(fromEcInNistRep, algorithmMode);
         KeysMetadataRepresentation keys = adminClient.realm(TEST_REALM_NAME).keys().getKeyMetadata();
         KeysMetadataRepresentation.KeyMetadataRepresentation originalKey = null;
         for (KeyMetadataRepresentation k : keys.getKeys()) {
@@ -186,14 +236,15 @@ public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
         }
 
         ComponentRepresentation createdRep = adminClient.realm(TEST_REALM_NAME).components().component(keyComponentId).toRepresentation();
-        createdRep.getConfig().putSingle(ECDSA_ELLIPTIC_CURVE_KEY, ToEcInNistRep);
+        createdRep.getConfig().putSingle(ECDH_ELLIPTIC_CURVE_KEY, toEcInNistRep);
         adminClient.realm(TEST_REALM_NAME).components().component(keyComponentId).update(createdRep);
 
         createdRep = adminClient.realm(TEST_REALM_NAME).components().component(keyComponentId).toRepresentation();
 
         // stands for the number of properties in the key provider config
-        assertEquals(2, createdRep.getConfig().size());
-        assertEquals(ToEcInNistRep, createdRep.getConfig().getFirst(ECDSA_ELLIPTIC_CURVE_KEY));
+        assertEquals(3, createdRep.getConfig().size());
+        assertEquals(toEcInNistRep, createdRep.getConfig().getFirst(ECDH_ELLIPTIC_CURVE_KEY));
+        assertEquals(algorithmMode, createdRep.getConfig().getFirst(ECDH_ALGORITHM_MODE_KEY));
 
         keys = adminClient.realm(TEST_REALM_NAME).keys().getKeyMetadata();
         KeysMetadataRepresentation.KeyMetadataRepresentation key = null;
@@ -208,9 +259,14 @@ public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
         assertEquals(keyComponentId, key.getProviderId());
         assertNotEquals(originalKey.getKid(), key.getKid());  // kid is changed if key was regenerated
         assertEquals(KeyType.EC, key.getType());
-        assertNotEquals(originalKey.getAlgorithm(), key.getAlgorithm());
-        assertEquals(ToEcInNistRep, GeneratedEcdsaKeyProviderFactory.convertJWSAlgorithmToECDomainParmNistRep(key.getAlgorithm()));
-        assertEquals(ToEcInNistRep, getCurveFromPublicKey(key.getPublicKey()));
+        assertEquals(KeyUse.ENC, key.getUse());
+        if (ECDH_ALGORITHM_MODE_KW.equals(algorithmMode)) {
+            assertNotEquals(originalKey.getAlgorithm(), key.getAlgorithm());
+            assertEquals(toEcInNistRep, GeneratedEcdhKeyProviderFactory.convertJWEAlgorithmToECDomainParmNistRep(key.getAlgorithm()));
+        } else {
+            assertEquals(originalKey.getAlgorithm(), key.getAlgorithm());
+        }
+        assertEquals(toEcInNistRep, getCurveFromPublicKey(key.getPublicKey()));
     }
 
     protected ComponentRepresentation createRep(String name, String providerId) {
@@ -223,9 +279,9 @@ public class GeneratedEcdsaKeyProviderTest extends AbstractKeycloakTest {
         return rep;
     }
 
-    private String getCurveFromPublicKey(String publicEcdsaKeyBase64Encoded) throws Exception {
+    private String getCurveFromPublicKey(String publicEcKeyBase64Encoded) throws Exception {
         KeyFactory kf = KeyFactory.getInstance("EC");
-        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.decode(publicEcdsaKeyBase64Encoded));
+        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.decode(publicEcKeyBase64Encoded));
         ECPublicKey ecKey = (ECPublicKey) kf.generatePublic(publicKeySpec);
         return "P-" + ecKey.getParams().getCurve().getField().getFieldSize();
     }
