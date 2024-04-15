@@ -142,8 +142,11 @@ final class OcspHandler implements HttpHandler {
                 new AlgorithmIdentifier(PKCSObjectIdentifiers.sha256WithRSAEncryption),
                 new AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256)).build(privateKey);
 
-        final OCSPResp response = new OCSPRespBuilder().build(OCSPResp.SUCCESSFUL,
-                responseBuilder.build(contentSigner, chain, new Date()));
+        // nonce is mandatory for testing that the nonce is properly set
+        final OCSPResp response = nonce != null
+                ? new OCSPRespBuilder().build(OCSPResp.SUCCESSFUL,
+                        responseBuilder.build(contentSigner, chain, new Date()))
+                : new OCSPRespBuilder().build(OCSPResp.MALFORMED_REQUEST, null);
 
         final byte[] responseBytes = response.getEncoded();
 

@@ -118,15 +118,15 @@ public class BCFIPSOCSPProvider extends OCSPProvider {
             DigestCalculator digCalc = dcp.get(CertificateID.HASH_SHA1);
             JcaCertificateID certificateID = new JcaCertificateID(digCalc, issuerCertificate, cert.getSerialNumber());
 
-            // Create a nounce extension to protect against replay attacks
+            // Create a nonce extension to protect against replay attacks
             SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
-            BigInteger nounce = BigInteger.valueOf(Math.abs(random.nextInt()));
+            BigInteger nonce = BigInteger.valueOf(Math.abs(random.nextInt()));
 
-            DEROctetString derString = new DEROctetString(nounce.toByteArray());
-            Extension nounceExtension = new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, derString);
-            Extensions extensions = new Extensions(nounceExtension);
+            DEROctetString derString = new DEROctetString(nonce.toByteArray());
+            Extension nonceExtension = new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, derString);
+            Extensions extensions = new Extensions(nonceExtension);
 
-            OCSPReq ocspReq = new OCSPReqBuilder().addRequest(certificateID, extensions).build();
+            OCSPReq ocspReq = new OCSPReqBuilder().addRequest(certificateID).setRequestExtensions(extensions).build();
 
             URI responderURI = responderURIs.get(0);
             logger.log(Level.INFO, "OCSP Responder {0}", responderURI);
@@ -137,7 +137,7 @@ public class BCFIPSOCSPProvider extends OCSPProvider {
                 switch (resp.getStatus()) {
                     case OCSPResp.SUCCESSFUL:
                         if (resp.getResponseObject() instanceof BasicOCSPResp) {
-                            return processBasicOCSPResponse(issuerCertificate, responderCert, date, certificateID, nounce, (BasicOCSPResp)resp.getResponseObject());
+                            return processBasicOCSPResponse(issuerCertificate, responderCert, date, certificateID, nonce, (BasicOCSPResp)resp.getResponseObject());
                         } else {
                             throw new CertPathValidatorException("OCSP responder returned an invalid or unknown OCSP response.");
                         }
@@ -170,7 +170,7 @@ public class BCFIPSOCSPProvider extends OCSPProvider {
         }
     }
 
-    private OCSPRevocationStatus processBasicOCSPResponse(X509Certificate issuerCertificate, X509Certificate responderCertificate, Date date, JcaCertificateID certificateID, BigInteger nounce, BasicOCSPResp basicOcspResponse)
+    private OCSPRevocationStatus processBasicOCSPResponse(X509Certificate issuerCertificate, X509Certificate responderCertificate, Date date, JcaCertificateID certificateID, BigInteger nonce, BasicOCSPResp basicOcspResponse)
             throws OCSPException, NoSuchProviderException, NoSuchAlgorithmException, CertificateNotYetValidException, CertificateExpiredException, CertPathValidatorException {
         SingleResp expectedResponse = null;
         for (SingleResp singleResponse : basicOcspResponse.getResponses()) {
@@ -181,7 +181,7 @@ public class BCFIPSOCSPProvider extends OCSPProvider {
         }
 
         if (expectedResponse != null) {
-            verifyResponse(basicOcspResponse, issuerCertificate, responderCertificate, nounce.toByteArray(), date);
+            verifyResponse(basicOcspResponse, issuerCertificate, responderCertificate, nonce.toByteArray(), date);
             return singleResponseToRevocationStatus(expectedResponse);
         } else {
             throw new CertPathValidatorException("OCSP response does not include a response for a certificate supplied in the OCSP request");
