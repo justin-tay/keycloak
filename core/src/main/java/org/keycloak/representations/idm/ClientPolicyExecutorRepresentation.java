@@ -18,7 +18,10 @@
 
 package org.keycloak.representations.idm;
 
+import java.util.Map;
 import java.util.Objects;
+
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,6 +35,7 @@ public class ClientPolicyExecutorRepresentation {
     private String executorProviderId;
 
     @JsonProperty("configuration")
+    @Schema(implementation = Map.class)
     private JsonNode configuration;
 
     public String getExecutorProviderId() {
