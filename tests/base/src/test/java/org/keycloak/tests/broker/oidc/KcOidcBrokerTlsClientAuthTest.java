@@ -191,6 +191,12 @@ public class KcOidcBrokerTlsClientAuthTest extends AbstractKcOidcBrokerTest {
         rep.getConfig().put(IdentityProviderModel.MIN_VALIDITY_TOKEN, "86400");
         idp.update(rep);
 
+        // the client has to be allowed to retrieve the external token of this provider
+        ClientRepresentation appClient = consumerRealm.admin().clients().findByClientId(CONSUMER_BROKER_APP_CLIENT_ID).get(0);
+        appClient.getAttributes().put(OIDCConfigAttributes.EXTERNAL_TOKEN_ENABLED, Boolean.TRUE.toString());
+        appClient.getAttributes().put(OIDCConfigAttributes.EXTERNAL_TOKEN_IDP, getIdpAlias());
+        consumerRealm.admin().clients().get(appClient.getId()).update(appClient);
+
         loginUser();
 
         // the user is allowed to read the stored token
